@@ -54,10 +54,10 @@ class plugins_mainsectors_public extends plugins_mainsectors_db{
     /**
      * Class constructor
      */
-    public function __construct(){
-        $this->template = new frontend_model_template();
-		$this->data = new frontend_model_data($this);
-		$this->lang = $this->template->currentLanguage();
+    public function __construct($t = null){
+        $this->template = $t instanceof frontend_model_template ? $t : new frontend_model_template();
+		$this->data = new frontend_model_data($this,$this->template);
+		$this->lang = $this->template->lang;
 		$this->modelCatalog = new frontend_model_catalog($this->template);
 		$this->dbCatalog = new frontend_db_catalog();
 		$this->modelPage = new frontend_model_pages($this->template);
@@ -102,7 +102,8 @@ class plugins_mainsectors_public extends plugins_mainsectors_db{
 		if($cats and $cats['ids'] !== null) {
 			$data = $this->modelCatalog->getData(array(
 				'context' => 'category',
-				'select' => explode(',',$cats['ids'])
+				'select' => explode(',',$cats['ids']),
+				'deepness' => 1
 			),$current);
 			$msc = $this->data->parseData($data,$this->modelCatalog,$current);
 			$cat_arr = array();
