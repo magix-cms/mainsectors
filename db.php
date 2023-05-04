@@ -1,22 +1,21 @@
 <?php
 class plugins_mainsectors_db
 {
-	/**
-	 * @param $config
-	 * @param bool $params
-	 * @return mixed|null
-	 * @throws Exception
-	 */
-	public function fetchData($config, $params = false)
-	{
-		if (!is_array($config)) return '$config must be an array';
-
-		$sql = '';
+    /**
+     * @var debug_logger $logger
+     */
+    protected debug_logger $logger;
+    /**
+     * @param array $config
+     * @param array $params
+     * @return array|bool
+     */
+    public function fetchData(array $config, array $params = []) {
 
 		if ($config['context'] === 'all') {
 			switch ($config['type']) {
 				case 'mss':
-					$sql = "SELECT 
+					$query = "SELECT 
 								ms.id_ms,
 								ms.id_page, 
 								ms.type_ms,
@@ -29,7 +28,7 @@ class plugins_mainsectors_db
 							ORDER BY ms.order_ms ASC";
 					break;
 				case 'pages':
-					$sql = 'SELECT * FROM (
+					$query = 'SELECT * FROM (
 							SELECT p.id_pages AS id, p.id_parent AS parent, pc.name_pages AS name
 							FROM mc_cms_page AS p
 							LEFT JOIN mc_cms_page_content AS pc
@@ -42,7 +41,7 @@ class plugins_mainsectors_db
 							GROUP BY pt.id';
 					break;
 				case 'categories':
-					$sql = 'SELECT * FROM (
+					$query = 'SELECT * FROM (
 							SELECT p.id_cat as id, p.id_parent as parent, pc.name_cat as name
 							FROM mc_catalog_cat as p
 							LEFT JOIN mc_catalog_cat_content as pc
@@ -54,20 +53,28 @@ class plugins_mainsectors_db
 							GROUP BY pt.id';
 					break;
 				case 'order':
-					$sql = 'SELECT
+					$query = 'SELECT
 								id_page,
 								type_ms,
 								order_ms
 							FROM mc_mainsectors ORDER BY order_ms ASC';
 					break;
-			}
+                default:
+                    return false;
+            }
 
-			return $sql ? component_routing_db::layer()->fetchAll($sql, $params) : null;
+            try {
+                return component_routing_db::layer()->fetchAll($query, $params);
+            }
+            catch (Exception $e) {
+                if(!isset($this->logger)) $this->logger = new debug_logger(MP_LOG_DIR);
+                $this->logger->log('statement','db',$e->getMessage(),$this->logger::LOG_MONTH);
+            }
 		}
 		elseif ($config['context'] === 'one') {
 			switch ($config['type']) {
 				case 'newMs':
-					$sql = "SELECT 
+					$query = "SELECT 
 								ms.id_ms,
 								ms.id_page, 
 								ms.type_ms,
@@ -80,78 +87,79 @@ class plugins_mainsectors_db
 							ORDER BY ms.order_ms DESC LIMIT 0,1";
 					break;
 				case 'homeMsp':
-					$sql = "SELECT 
-								GROUP_CONCAT(`id_page` SEPARATOR ',') as ids
+					$query = "SELECT 
+								GROUP_CONCAT(`id_page` ORDER BY order_ms SEPARATOR ',') as ids
 						  	FROM mc_mainsectors WHERE type_ms = 'page'";
 					break;
 				case 'homeMsc':
-					$sql = "SELECT 
-								GROUP_CONCAT(`id_page` SEPARATOR ',') as ids
+					$query = "SELECT 
+								GROUP_CONCAT(`id_page` ORDER BY order_ms SEPARATOR ',') as ids
 							FROM mc_mainsectors WHERE type_ms = 'category'";
 					break;
-			}
+                default:
+                    return false;
+            }
 
-			return $sql ? component_routing_db::layer()->fetch($sql, $params) : null;
-		}
+            try {
+                return component_routing_db::layer()->fetch($query, $params);
+            }
+            catch (Exception $e) {
+                if(!isset($this->logger)) $this->logger = new debug_logger(MP_LOG_DIR);
+                $this->logger->log('statement','db',$e->getMessage(),$this->logger::LOG_MONTH);
+            }
+        }
+        return false;
 	}
 
-	/**
-	 * @param $config
-	 * @param array $params
-	 * @return bool|string
-	 */
-	public function insert($config, $params = array())
-	{
-		if (!is_array($config)) return '$config must be an array';
-
-		$sql = '';
+    /**
+     * @param array $config
+     * @param array $params
+     * @return bool|string
+     */
+    public function insert(array $config, array $params = []) {
 
 		switch ($config['type']) {
 			case 'ms_p':
-				$sql = 'INSERT INTO mc_mainsectors (id_page, type_ms, order_ms)  
+				$query = 'INSERT INTO mc_mainsectors (id_page, type_ms, order_ms)  
 						SELECT :id, :type, COUNT(order_ms) FROM mc_mainsectors';
 				break;
-		}
+            default:
+                return false;
+        }
 
-		if($sql === '') return 'Unknown request asked';
-
-		try {
-			component_routing_db::layer()->insert($sql,$params);
-			return true;
-		}
-		catch (Exception $e) {
-			return 'Exception reçue : '.$e->getMessage();
-		}
+        try {
+            component_routing_db::layer()->insert($query,$params);
+            return true;
+        }
+        catch (Exception $e) {
+            return 'Exception reçue : '.$e->getMessage();
+        }
 	}
 
-	/**
-	 * @param $config
-	 * @param array $params
-	 * @return bool|string
-	 */
-	public function update($config, $params = array())
-	{
-		if (!is_array($config)) return '$config must be an array';
-
-		$sql = '';
+    /**
+     * @param array $config
+     * @param array $params
+     * @return bool|string
+     */
+    public function update(array $config, array $params = []) {
 
 		switch ($config['type']) {
 			case 'order':
-				$sql = 'UPDATE mc_mainsectors 
+				$query = 'UPDATE mc_mainsectors 
 						SET order_ms = :order_ms
 						WHERE id_ms = :id_ms';
 				break;
-		}
+            default:
+                return false;
+        }
 
-		if($sql === '') return 'Unknown request asked';
-
-		try {
-			component_routing_db::layer()->update($sql,$params);
-			return true;
-		}
-		catch (Exception $e) {
-			return 'Exception reçue : '.$e->getMessage();
-		}
+        try {
+            component_routing_db::layer()->update($query,$params);
+            return true;
+        }
+        catch (Exception $e) {
+            return 'Exception reçue : '.$e->getMessage();
+        }
 	}
 
 	/**
@@ -162,19 +170,19 @@ class plugins_mainsectors_db
 	public function delete($config, $params = array())
 	{
 		if (!is_array($config)) return '$config must be an array';
-			$sql = '';
+			$query = '';
 
 			switch ($config['type']) {
 				case 'ms':
-					$sql = 'DELETE FROM mc_mainsectors
+					$query = 'DELETE FROM mc_mainsectors
 							WHERE id_ms = :id';
 					break;
 			}
 
-		if($sql === '') return 'Unknown request asked';
+		if($query === '') return 'Unknown request asked';
 
 		try {
-			component_routing_db::layer()->delete($sql,$params);
+			component_routing_db::layer()->delete($query,$params);
 			return true;
 		}
 		catch (Exception $e) {

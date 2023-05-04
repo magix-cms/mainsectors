@@ -50,7 +50,7 @@ class plugins_mainsectors_public extends plugins_mainsectors_db{
     /**
      * @var frontend_model_template
      */
-    protected $template, $data, $lang, $modelCatalog, $dbCatalog, $modelPage, $dbPage;
+    protected $template, $data, $lang;
     /**
      * Class constructor
      */
@@ -58,10 +58,6 @@ class plugins_mainsectors_public extends plugins_mainsectors_db{
         $this->template = $t instanceof frontend_model_template ? $t : new frontend_model_template();
 		$this->data = new frontend_model_data($this,$this->template);
 		$this->lang = $this->template->lang;
-		$this->modelCatalog = new frontend_model_catalog($this->template);
-		$this->dbCatalog = new frontend_db_catalog();
-		$this->modelPage = new frontend_model_pages($this->template);
-		$this->dbPage = new frontend_db_pages();
 	}
 
 	/**
@@ -76,52 +72,147 @@ class plugins_mainsectors_public extends plugins_mainsectors_db{
 		return $this->data->getItems($type, $id, $context, $assign);
 	}
 
-	/**
-	 * @param array $params
-	 * @return array
-	 */
-    public function getMss($current){
-		$pages = $this->getItems('homeMsp',null,'one',false);
-		$cats = $this->getItems('homeMsc',null,'one',false);
-		$order = $this->getItems('order',null,'all',false);
+    private function setPagesData(array $rawData): array {
+        $hc = [];
+        if (!empty($rawData)) {
+            foreach ($rawData as $key => $value) {
+                if (isset($value['id_ms'])) {
+                    $hc[$key]['id_ms'] = $value['id_ms'];
+                }
+            }
+        }
+        return $hc;
+    }
+    /**
+     * @param array $data
+     * @return array
+     */
+    public function extendListPages(array $data): array {
+        return $this->setPagesData($data);
+    }
+    /**
+     * @param array $filter
+     * @return array
+     */
+    public function getPagesList(array $filter = []): array {
+        if(http_request::isGet('controller')) $this->controller = form_inputEscape::simpleClean($_GET['controller']);
+        $extend = [];
+        if(!isset($this->controller)) {
+            $hcs = $this->getItems('homeMsp',NULL,'one', false);
+            if (!empty($hcs) && isset($hcs['ids'])) {
+                $extend['extendQueryParams'] = [
+                    'select' => [
+                        'msp.id_ms'
+                    ],
+                    'join' => [
+                        ['type' => 'LEFT JOIN',
+                            'table' => 'mc_mainsectors',
+                            'as' => 'msp',
+                            'on' => [
+                                'table' => 'p',
+                                'key' => 'id_pages',
+                                'newkey' => 'id_page'
+                            ]
+                        ]
 
-		// *** Get and parse pages
-		if($pages and $pages['ids'] !== null) {
-			$data = $this->modelPage->getData(array(
-				'context' => 'one',
-				'select' => explode(',',$pages['ids'])
-			),$current);
-			$msp = $this->data->parseData($data,$this->modelPage,$current);
-			$page_arr = array();
-			foreach ($msp as $page) {
-				$page_arr[$page['id']] = $page;
-			}
-		}
+                    ],
+                    'where' => [
+                        [
+                            'type' => 'AND',
+                            'condition' => 'p.id_pages IN (' . $hcs['ids'] . ')'
+                        ]
+                    ],/*
+                    'order' => [
+                        'hc.order_hc ASC'
+                    ]*/
+                ];
+                /*$extend['extendQueryParams']['filter'] = [[
+                    'type' => 'AND',
+                    'condition' => 'p.id_pages IN (' . $hcs['ids'] . ')'
+                ]];*/
+                //AND p.id_product IN ('.$ids['listids'].')
+                $extend['newRow'] = ['mainsector' => 'mainsector'];
+                $extend['collection'] = 'mainsector';
+                $extend['type'] = 'tree';
+                //print_r($extend);
+            }
+        }
+        return $extend;
+    }
+    /**
+     * @param array $data
+     * @return array
+     */
+    public function extendListCategory(array $data): array {
+        return $this->setPagesData($data);
+    }
+    /**
+     * @param array $filter
+     * @return array
+     */
+    public function getCategoryList(array $filter = []): array {
+        if(http_request::isGet('controller')) $this->controller = form_inputEscape::simpleClean($_GET['controller']);
+        $extend = [];
+        if(!isset($this->controller)) {
+            $hcs = $this->getItems('homeMsc',NULL,'one', false);
+            if (!empty($hcs) && isset($hcs['ids'])) {
+                $extend['extendQueryParams'] = [
+                    'select' => [
+                        'msc.id_ms'
+                    ],
+                    'join' => [
+                        ['type' => 'LEFT JOIN',
+                            'table' => 'mc_mainsectors',
+                            'as' => 'msc',
+                            'on' => [
+                                'table' => 'cat',
+                                'key' => 'id_cat',
+                                'newkey' => 'id_page'
+                            ]
+                        ]
 
-		// *** Get and parse categories
-		if($cats and $cats['ids'] !== null) {
-			$data = $this->modelCatalog->getData(array(
-				'context' => 'category',
-				'select' => explode(',',$cats['ids']),
-				'deepness' => 1
-			),$current);
-			$msc = $this->data->parseData($data,$this->modelCatalog,$current);
-			$cat_arr = array();
-			foreach ($msc as $page) {
-				$cat_arr[$page['id']] = $page;
-			}
-		}
-
-		// *** Mix pages and categories to fit the sectors order
-		$arr = array();
-		foreach ($order as $item) {
-			$ref = array();
-			switch ($item['type_ms']) {
-				case 'page': $ref = $page_arr; break;
-				case 'category': $ref = $cat_arr; break;
-			}
-			$arr[] = $ref[$item['id_page']];
-		}
-		return $arr;
+                    ],
+                    'where' => [
+                        [
+                            'type' => 'AND',
+                            'condition' => 'cat.id_cat IN (' . $hcs['ids'] . ')'
+                        ]
+                    ],/*
+                    'order' => [
+                        'hc.order_hc ASC'
+                    ]*/
+                ];
+                /*$extend['extendQueryParams']['filter'] = [[
+                    'type' => 'AND',
+                    'condition' => 'p.id_pages IN (' . $hcs['ids'] . ')'
+                ]];*/
+                //AND p.id_product IN ('.$ids['listids'].')
+                $extend['newRow'] = ['mainsector' => 'mainsector'];
+                $extend['collection'] = 'mainsector';
+                $extend['type'] = 'tree';
+                //print_r($extend);
+            }
+        }
+        return $extend;
+    }
+    public function getMss(){
+        $order = $this->getItems('order',null,'all',false);
+        // *** Mix pages and categories to fit the sectors order
+        $arr = [];
+        foreach ($order as $item) {
+            $ref = [];
+            switch ($item['type_ms']) {
+                case 'page':
+                    $page = new frontend_controller_pages();
+                    $ref = $page->getPagesList();
+                    break;
+                case 'category': //$ref = $cat_arr; break;
+                    $cat = new frontend_controller_catalog();
+                    $ref = $cat->getCategoryList();
+                    break;
+            }
+            $arr[] = $ref[$item['id_page']];
+        }
+        return $arr;
     }
 }
