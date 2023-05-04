@@ -17,10 +17,18 @@
 		</authors>
 		<release>
 			<date_create>28/01/2019</date_create>
-			<date_update>28/01/2019</date_update>
-			<version>1.0.0</version>
+			<date_update>04/05/2023</date_update>
+			<version>2.0</version>
 			<phase>Stable</phase>
 		</release>
+		<bind>
+			<core>
+				<name>category</name>
+			</core>
+			<core>
+				<name>pages</name>
+			</core>
+		</bind>
 		<support>
 			<ticket href="https://github.com/magix-cms/magixcms/issues"></ticket>
 			<git href="https://github.com/magix-cms/magixcms"></git>
