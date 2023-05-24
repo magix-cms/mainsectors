@@ -100,7 +100,7 @@ class plugins_mainsectors_public extends plugins_mainsectors_db{
         if(!isset($this->controller)) {
             $hcs = $this->getItems('homeMsp',NULL,'one', false);
             if (!empty($hcs) && isset($hcs['ids'])) {
-                $extend['extendQueryParams'] = [
+                /*$extend['extendQueryParams'] = [
                     'select' => [
                         'msp.id_ms'
                     ],
@@ -121,11 +121,11 @@ class plugins_mainsectors_public extends plugins_mainsectors_db{
                             'type' => 'AND',
                             'condition' => 'p.id_pages IN (' . $hcs['ids'] . ')'
                         ]
-                    ],/*
+                    ],
                     'order' => [
                         'hc.order_hc ASC'
-                    ]*/
-                ];
+                    ]
+                ];*/
                 /*$extend['extendQueryParams']['filter'] = [[
                     'type' => 'AND',
                     'condition' => 'p.id_pages IN (' . $hcs['ids'] . ')'

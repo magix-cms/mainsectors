@@ -14,11 +14,15 @@
 				<name>Salvatore Di Salvo</name>
 				<website href="http://www.disalvo-infographiste.be" />
 			</author>
+			<author>
+				<name>Gerits Aurelien</name>
+				<website href="http://www.magix-cms.com" />
+			</author>
 		</authors>
 		<release>
 			<date_create>28/01/2019</date_create>
-			<date_update>04/05/2023</date_update>
-			<version>2.0</version>
+			<date_update>24/05/2023</date_update>
+			<version>2.1</version>
 			<phase>Stable</phase>
 		</release>
 		<bind>
