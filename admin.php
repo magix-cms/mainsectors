@@ -5,7 +5,7 @@ require_once ('db.php');
  #
  # This file is part of MAGIX CMS.
  # MAGIX CMS, The content management system optimized for users
- # Copyright (C) 2008 - 2013 magix-cms.com <support@magix-cms.com>
+ # Copyright (C) 2008 - 2023 magix-cms.com <support@magix-cms.com>
  #
  # OFFICIAL TEAM :
  #
@@ -35,122 +35,101 @@ require_once ('db.php');
  */
  /**
  * MAGIX CMS
- * @category   advantage
- * @package    plugins
- * @copyright  MAGIX CMS Copyright (c) 2008 - 2015 Gerits Aurelien,
- * http://www.magix-cms.com,  http://www.magix-cjquery.com
- * @license    Dual licensed under the MIT or GPL Version 3 licenses.
- * @version    2.0
- * Author: Salvatore Di Salvo
- * Date: 16-12-15
- * Time: 14:00
- * @name plugins_advantage_admin
- * Le plugin advantage
+ * @category plugins
+ * @package advantage
+ * @copyright  MAGIX CMS Copyright (c) 2008 - 2015 Gerits Aurelien, http://www.magix-cms.com,  http://www.magix-cjquery.com
+ * @license Dual licensed under the MIT or GPL Version 3 licenses.
+ * @version 2.0
+ * @author: Salvatore Di Salvo
+ * @name plugins_mainsectors_admin
  */
 class plugins_mainsectors_admin extends plugins_mainsectors_db {
 	/**
-	 * @var object
+	 * @var backend_model_template $template
+	 * @var backend_model_data $data
+	 * @var component_core_message $message
+	 * @var backend_model_language $modelLanguage
+	 * @var component_collections_language $collectionLanguage
+	 * @var backend_model_setting $settings
 	 */
-	protected $controller,
-		$data,
-		$template,
-		$message,
-		$plugins,
-		$modelLanguage,
-		$collectionLanguage,
-		$header,
-		$settings,
-		$setting;
+	protected backend_model_template $template;
+	protected backend_model_data $data;
+	protected component_core_message $message;
+	protected backend_model_language $modelLanguage;
+	protected component_collections_language $collectionLanguage;
+	protected backend_model_setting $settings;
 
 	/**
-	 * Les variables globales
+	 * @var array $setting
+	 */
+	protected array $setting;
+
+	/**
 	 * @var integer $edit
+	 * @var integer $id
+	 */
+	public int
+		$edit,
+		$id;
+
+	/**
 	 * @var string $action
 	 * @var string $tabs
+	 * @var string $content
+	 * @var string $type_ms
 	 */
-	public $edit = 0,
-		$action = '',
-		$tabs = '',
-		$content = '';
+	public string
+		$action,
+		$tabs,
+		$content,
+		$type_ms = 'page';
 
 	/**
-	 * Les variables plugin
-	 * @var array $adv
-	 * @var integer $id
-	 * @var array $advantage
+	 * @var array $page
 	 */
-	public
-		$id = 0,
-		$type_ms = 'page',
-		$page = array();
+	public array $page;
 
-    /**
-	 * Construct class
-	 */
-	public function __construct(){
+	public function __construct() {
 		$this->template = new backend_model_template();
-		$this->plugins = new backend_controller_plugins();
+		$this->data = new backend_model_data($this);
 		$this->message = new component_core_message($this->template);
 		$this->modelLanguage = new backend_model_language($this->template);
 		$this->collectionLanguage = new component_collections_language();
-		$this->data = new backend_model_data($this);
 		$this->settings = new backend_model_setting();
 		$this->setting = $this->settings->getSetting();
-		$this->header = new http_header();
 
 		$formClean = new form_inputEscape();
 
+		if (http_request::isRequest('action')) $this->action = $formClean->simpleClean($_REQUEST['action']);
+
 		// --- GET
-		if(http_request::isGet('controller')) {
-			$this->controller = $formClean->simpleClean($_GET['controller']);
-		}
-		if (http_request::isGet('edit')) {
-			$this->edit = $formClean->numeric($_GET['edit']);
-		}
-		if (http_request::isGet('action')) {
-			$this->action = $formClean->simpleClean($_GET['action']);
-		} elseif (http_request::isPost('action')) {
-			$this->action = $formClean->simpleClean($_POST['action']);
-		}
-		if (http_request::isGet('tabs')) {
-			$this->tabs = $formClean->simpleClean($_GET['tabs']);
-		}
-		if (http_request::isGet('content')) {
-			$this->content = $formClean->simpleClean($_GET['content']);
-		}
+		if (http_request::isGet('edit')) $this->edit = $formClean->numeric($_GET['edit']);
+		if (http_request::isGet('tabs')) $this->tabs = $formClean->simpleClean($_GET['tabs']);
+		if (http_request::isGet('content')) $this->content = $formClean->simpleClean($_GET['content']);
 
 		// --- ADD or EDIT
-		if (http_request::isPost('pages_id')) {
-			$this->id = intval($formClean->numeric($_POST['pages_id']));
-		}
-		if (http_request::isPost('id')) {
-			$this->id = intval($formClean->simpleClean($_POST['id']));
-		}
-		if (http_request::isPost('type_ms')) {
-			$this->type_ms = $formClean->simpleClean($_POST['type_ms']);
-		}
+		if (http_request::isPost('pages_id')) $this->id = intval($formClean->numeric($_POST['pages_id']));
+		if (http_request::isPost('id')) $this->id = intval($formClean->simpleClean($_POST['id']));
+		if (http_request::isPost('type_ms')) $this->type_ms = $formClean->simpleClean($_POST['type_ms']);
 
 		// --- Order
-		if (http_request::isPost('page')) {
-			$this->page = $formClean->arrayClean($_POST['page']);
-		}
+		if (http_request::isPost('page')) $this->page = $formClean->arrayClean($_POST['page']);
 	}
 
 	/**
 	 * Method to override the name of the plugin in the admin menu
 	 * @return string
 	 */
-	public function getExtensionName()
-	{
+	public function getExtensionName(): string {
 		return $this->template->getConfigVars('mainsectors_plugin');
 	}
 
 	/**
+	 * @param array $pages
 	 * @return array
 	 */
-	private function setPagesTree($pages)
-	{
-		$childs = array();
+	private function setPagesTree(array $pages): array {
+		$childs = [];
 
 		foreach($pages as &$item) {
 			$k = $item['parent'] == null ? 'root' : $item['parent'];
@@ -164,7 +143,7 @@ class plugins_mainsectors_admin extends plugins_mainsectors_db {
 			}
 		}
 
-		$this->template->assign('pages', $childs['root']);
+		return $childs['root'] ?: [];
 	}
 
 	/**
@@ -183,12 +162,11 @@ class plugins_mainsectors_admin extends plugins_mainsectors_db {
 	 * Insert data
 	 * @param array $config
 	 */
-	private function add($config)
-	{
+	private function add(array $config) {
 		switch ($config['type']) {
 			case 'ms_p':
 				parent::insert(
-					array('type' => $config['type']),
+					['type' => $config['type']],
 					$config['data']
 				);
 				break;
@@ -197,14 +175,13 @@ class plugins_mainsectors_admin extends plugins_mainsectors_db {
 
 	/**
 	 * Delete a record
-	 * @param $config
+	 * @param array $config
 	 */
-	private function del($config)
-	{
+	private function del(array $config) {
 		switch ($config['type']) {
 			case 'ms':
 				parent::delete(
-					array('type' => $config['type']),
+					['type' => $config['type']],
 					$config['data']
 				);
 				$this->message->json_post_response(true,'delete',array('id' => $this->id));
@@ -215,17 +192,15 @@ class plugins_mainsectors_admin extends plugins_mainsectors_db {
 	/**
 	 * Update order
 	 */
-	public function order(){
+	public function order() {
 		$p = $this->page;
 		for ($i = 0; $i < count($p); $i++) {
 			parent::update(
-				array(
-					'type' => 'order'
-				),
-				array(
+				['type' => 'order'],
+				[
 					'id_ms'    => $p[$i],
 					'order_ms' => $i
-				)
+				]
 			);
 		}
 	}
@@ -233,47 +208,44 @@ class plugins_mainsectors_admin extends plugins_mainsectors_db {
 	/**
 	 * Execute the plugin
 	 */
-	public function run()
-	{
-		if($this->action) {
+	public function run() {
+		if(isset($this->action)) {
 			switch ($this->action) {
 				case 'add':
-					$this->add(array(
+					$this->add([
 						'type' => 'ms_p',
-						'data' => array(
+						'data' => [
 							'id' => $this->id,
 							'type' => $this->type_ms
-						)
-					));
-					$defaultLanguage = $this->collectionLanguage->fetchData(array('context'=>'one','type'=>'default'));
-					$this->getItems('newMs',array(
+						]
+					]);
+					$defaultLanguage = $this->collectionLanguage->fetchData(['context'=>'one','type'=>'default']);
+					$this->getItems('newMs',[
 						'lang_p' => $defaultLanguage['id_lang'],
 						'lang_c' => $defaultLanguage['id_lang']
-					),'one','ms');
+					],'one','ms');
 					$this->modelLanguage->getLanguage();
 					$display = $this->template->fetch('loop/pages.tpl');
 					$this->message->json_post_response(true,'add',$display);
 					break;
 				case 'delete':
-					if(isset($this->id) && !empty($this->id)) {
-						$this->del(
-							array(
-								'type' => 'ms',
-								'data' => array(
-									'id' => $this->id
-								)
-							)
-						);
+					if(!empty($this->id)) {
+						$this->del([
+							'type' => 'ms',
+							'data' => ['id' => $this->id]
+						]);
 					}
 					break;
 				case 'order':
-					if (isset($this->page) && is_array($this->page)) {
+					if (!empty($this->page)) {
 						$this->order();
 					}
 					break;
 				case 'get':
-					if(isset($this->content)) {
-						$this->setPagesTree($this->getItems($this->content,null,'all',false));
+					if(!empty($this->content)) {
+						$data = $this->getItems($this->content,null,'all',false);
+						$pages = empty($data) ? [] : $this->setPagesTree($data);
+						$this->template->assign('pages', $pages);
 						$this->template->display('loop/page.tpl');
 					}
 					break;
@@ -281,11 +253,11 @@ class plugins_mainsectors_admin extends plugins_mainsectors_db {
 		}
 		else {
 			$this->modelLanguage->getLanguage();
-			$defaultLanguage = $this->collectionLanguage->fetchData(array('context'=>'one','type'=>'default'));
-			$this->getItems('mss',array(
+			$defaultLanguage = $this->collectionLanguage->fetchData(['context'=>'one','type'=>'default']);
+			$this->getItems('mss',[
 				'lang_p' => $defaultLanguage['id_lang'],
 				'lang_c' => $defaultLanguage['id_lang']
-			),'all');
+			],'all');
 			$this->template->display('index.tpl');
 		}
 	}

@@ -1,17 +1,16 @@
 <?php
-class plugins_mainsectors_db
-{
+class plugins_mainsectors_db {
     /**
      * @var debug_logger $logger
      */
     protected debug_logger $logger;
+
     /**
      * @param array $config
      * @param array $params
      * @return array|bool
      */
     public function fetchData(array $config, array $params = []) {
-
 		if ($config['context'] === 'all') {
 			switch ($config['type']) {
 				case 'mss':
@@ -25,39 +24,57 @@ class plugins_mainsectors_db
 							LEFT JOIN mc_cms_page_content as pc ON p.id_pages = pc.id_pages AND pc.id_lang = :lang_p
 							LEFT JOIN mc_catalog_cat as c ON ms.id_page = c.id_cat AND ms.type_ms = 'category'
 							LEFT JOIN mc_catalog_cat_content as cc ON c.id_cat = cc.id_cat AND cc.id_lang = :lang_c
-							ORDER BY ms.order_ms ASC";
+							ORDER BY ms.order_ms";
 					break;
 				case 'pages':
-					$query = 'SELECT * FROM (
-							SELECT p.id_pages AS id, p.id_parent AS parent, pc.name_pages AS name
-							FROM mc_cms_page AS p
-							LEFT JOIN mc_cms_page_content AS pc
-							USING ( id_pages ) 
-							LEFT JOIN mc_lang AS l ON pc.id_lang = l.id_lang
-							WHERE p.menu_pages =1
-							AND pc.published_pages =1
-							ORDER BY p.id_pages ASC , l.default_lang DESC
+					/*$query = 'SELECT * FROM (
+								SELECT p.id_pages AS id, p.id_parent AS parent, pc.name_pages AS name
+								FROM mc_cms_page AS p
+								LEFT JOIN mc_cms_page_content AS pc USING ( id_pages )
+								LEFT JOIN mc_lang AS l ON pc.id_lang = l.id_lang
+								WHERE p.menu_pages = 1
+								AND pc.published_pages = 1
+								ORDER BY p.id_pages , l.default_lang DESC
 							) as pt
-							GROUP BY pt.id';
+							GROUP BY pt.id';*/
+					$query = 'SELECT 
+								mcp.id_pages AS id, 
+								mcp.id_parent AS parent, 
+								mcpc.name_pages AS name
+							FROM mc_cms_page AS mcp
+							LEFT JOIN mc_cms_page_content AS mcpc USING ( id_pages ) 
+							LEFT JOIN mc_lang AS ml ON (mcpc.id_lang = ml.id_lang AND ml.default_lang = 1)
+							WHERE mcp.menu_pages = 1
+							AND mcpc.published_pages = 1
+							ORDER BY mcp.id_pages';
 					break;
 				case 'categories':
-					$query = 'SELECT * FROM (
+					/*$query = 'SELECT * FROM (
 							SELECT p.id_cat as id, p.id_parent as parent, pc.name_cat as name
 							FROM mc_catalog_cat as p
 							LEFT JOIN mc_catalog_cat_content as pc
 							USING(id_cat)
 							LEFT JOIN mc_lang AS l ON pc.id_lang = l.id_lang
 							WHERE pc.published_cat =1
-							ORDER BY p.id_cat ASC , l.default_lang DESC
+							ORDER BY p.id_cat , l.default_lang DESC
 							) as pt
-							GROUP BY pt.id';
+							GROUP BY pt.id';*/
+					$query = 'SELECT 
+								mcc.id_cat as id, 
+								mcc.id_parent as parent, 
+								mccc.name_cat as name
+							FROM mc_catalog_cat as mcc
+							LEFT JOIN mc_catalog_cat_content as mccc USING(id_cat)
+							LEFT JOIN mc_lang AS ml ON (mccc.id_lang = ml.id_lang AND ml.default_lang = 1)
+							WHERE mccc.published_cat =1
+							ORDER BY mcc.id_cat';
 					break;
 				case 'order':
 					$query = 'SELECT
 								id_page,
 								type_ms,
 								order_ms
-							FROM mc_mainsectors ORDER BY order_ms ASC';
+							FROM mc_mainsectors ORDER BY order_ms';
 					break;
                 default:
                     return false;
@@ -114,10 +131,9 @@ class plugins_mainsectors_db
     /**
      * @param array $config
      * @param array $params
-     * @return bool|string
+     * @return bool
      */
-    public function insert(array $config, array $params = []) {
-
+    public function insert(array $config, array $params = []): bool {
 		switch ($config['type']) {
 			case 'ms_p':
 				$query = 'INSERT INTO mc_mainsectors (id_page, type_ms, order_ms)  
@@ -132,17 +148,18 @@ class plugins_mainsectors_db
             return true;
         }
         catch (Exception $e) {
-            return 'Exception reçue : '.$e->getMessage();
+			if(!isset($this->logger)) $this->logger = new debug_logger(MP_LOG_DIR);
+			$this->logger->log('statement','db',$e->getMessage(),$this->logger::LOG_MONTH);
+			return false;
         }
 	}
 
     /**
      * @param array $config
      * @param array $params
-     * @return bool|string
+     * @return bool
      */
-    public function update(array $config, array $params = []) {
-
+    public function update(array $config, array $params = []): bool {
 		switch ($config['type']) {
 			case 'order':
 				$query = 'UPDATE mc_mainsectors 
@@ -158,35 +175,35 @@ class plugins_mainsectors_db
             return true;
         }
         catch (Exception $e) {
-            return 'Exception reçue : '.$e->getMessage();
+			if(!isset($this->logger)) $this->logger = new debug_logger(MP_LOG_DIR);
+			$this->logger->log('statement','db',$e->getMessage(),$this->logger::LOG_MONTH);
+			return false;
         }
 	}
 
 	/**
-	 * @param $config
+	 * @param array $config
 	 * @param array $params
-	 * @return bool|string
+	 * @return bool
 	 */
-	public function delete($config, $params = array())
-	{
-		if (!is_array($config)) return '$config must be an array';
-			$query = '';
-
-			switch ($config['type']) {
-				case 'ms':
-					$query = 'DELETE FROM mc_mainsectors
-							WHERE id_ms = :id';
-					break;
-			}
-
-		if($query === '') return 'Unknown request asked';
+	public function delete(array $config, array $params = []): bool {
+		switch ($config['type']) {
+			case 'ms':
+				$query = 'DELETE FROM mc_mainsectors
+						WHERE id_ms = :id';
+				break;
+			default:
+				return false;
+		}
 
 		try {
 			component_routing_db::layer()->delete($query,$params);
 			return true;
 		}
 		catch (Exception $e) {
-			return 'Exception reçue : '.$e->getMessage();
+			if(!isset($this->logger)) $this->logger = new debug_logger(MP_LOG_DIR);
+			$this->logger->log('statement','db',$e->getMessage(),$this->logger::LOG_MONTH);
+			return false;
 		}
 	}
 }
